@@ -1,5 +1,5 @@
 import os
-from dotenv import load_dotenv
+import json
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import firebase_admin
@@ -7,19 +7,22 @@ from firebase_admin import credentials, db
 import pandas as pd
 from datetime import datetime
 
-# Load environment variables from .env file
-load_dotenv()
-
-FIREBASE_CRED_PATH = os.getenv('FIREBASE_CRED_PATH')
-DATABASE_URL = os.getenv('DATABASE_URL')
-
 # ✅ Must be the first Streamlit command
 st.set_page_config(page_title="ESP32 Weather Station", layout="wide")
 
-# Initialize Firebase (only once)
+# Load credentials from Streamlit Secrets
+cred_json = os.getenv('FIREBASE_CREDENTIAL_JSON')
+db_url = os.getenv('DATABASE_URL')
+
+if not cred_json or not db_url:
+    st.error("❌ Firebase credentials or database URL not found in secrets!")
+    st.stop()
+
+# Initialize Firebase
 if not firebase_admin._apps:
-    cred = credentials.Certificate(FIREBASE_CRED_PATH)
-    firebase_admin.initialize_app(cred, {'databaseURL': DATABASE_URL})
+    cred_dict = json.loads(cred_json)
+    cred = credentials.Certificate(cred_dict)
+    firebase_admin.initialize_app(cred, {'databaseURL': db_url})
 
 # Auto-refresh every 60 seconds
 st_autorefresh(interval=60000, key="weatherdata_refresh")
@@ -44,7 +47,7 @@ def get_latest_data():
                 dt = datetime.strptime(k, "%Y-%m-%d_%H:%M:%S")
                 valid_data[dt] = v
             except ValueError:
-                continue  # Skip invalid timestamps
+                continue
 
         if not valid_data:
             return None, "⚠️ No valid timestamped data found."
