@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import firebase_admin
@@ -5,12 +7,14 @@ from firebase_admin import credentials, db
 import pandas as pd
 from datetime import datetime
 
+# Load environment variables from .env file
+load_dotenv()
+
+FIREBASE_CRED_PATH = os.getenv('FIREBASE_CRED_PATH')
+DATABASE_URL = os.getenv('DATABASE_URL')
+
 # ✅ Must be the first Streamlit command
 st.set_page_config(page_title="ESP32 Weather Station", layout="wide")
-
-# Firebase setup (adjust your paths and URLs accordingly)
-FIREBASE_CRED_PATH = 'weather-station-25716-firebase-adminsdk-fbsvc-9a69b630a9.json'
-DATABASE_URL = 'https://weather-station-25716-default-rtdb.asia-southeast1.firebasedatabase.app/'
 
 # Initialize Firebase (only once)
 if not firebase_admin._apps:
