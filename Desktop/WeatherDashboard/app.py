@@ -17,8 +17,6 @@ st_autorefresh(interval=60000, key="weatherdata_refresh")
 firebase_conf = st.secrets["firebase"]       # a dict
 database_url = st.secrets["database_url"]    # a string
 
-import json
-
 st.write(f"Type of firebase_conf: {type(st.secrets['firebase'])}")
 st.write(st.secrets["firebase"])
 st.stop()
