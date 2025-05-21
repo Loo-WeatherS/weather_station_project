@@ -12,8 +12,11 @@ st.set_page_config(page_title="ESP32 Weather Station", layout="wide")
 st_autorefresh(interval=60000, key="weatherdata_refresh")
 
 # 3) Load secrets directly as dict
-firebase_conf = st.secrets["firebase"]
-database_url = st.secrets["database_url"]
+firebase_conf = st.secrets["firebase"]       # a dict
+database_url = st.secrets["database_url"]    # a string
+
+cred = credentials.Certificate(firebase_conf)
+firebase_admin.initialize_app(cred, {"databaseURL": database_url})
 
 # 4) Initialize Firebase once
 if not firebase_admin._apps:
