@@ -16,7 +16,9 @@ try:
     # ✅ 2. Initialize Firebase
     if not firebase_admin._apps:
         cred = credentials.Certificate(firebase_conf)
-        firebase_admin.initialize_app(cred, {"databaseURL": database_url})
+        firebase_admin.initialize_app(cred, {
+            "databaseURL": database_url
+        })
 
     # ✅ 3. Fetch and show latest data
     ref = db.reference("weather-data")
