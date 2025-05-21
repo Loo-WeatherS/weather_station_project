@@ -2,38 +2,37 @@ import streamlit as st
 import firebase_admin
 from firebase_admin import credentials, db
 import pandas as pd
+import json
 
 st.set_page_config(page_title="ESP32 Weather Station", layout="centered")
 st.title("📡 ESP32 Weather Station - Latest Data")
 
-# ✅ Step 1: Load Firebase secrets from Streamlit secrets
 try:
-    firebase_conf = dict(st.secrets["firebase"])
-    database_url = firebase_conf.pop("database_url")  # Remove database_url from the credentials dict
+    # ✅ 1. Read JSON string and parse to dict
+    cred_json = st.secrets["FIREBASE_CREDENTIAL_JSON"]
+    firebase_conf = json.loads(cred_json)
+    database_url = st.secrets["database_url"]
 
-    # ✅ Step 2: Initialize Firebase
+    # ✅ 2. Initialize Firebase
     if not firebase_admin._apps:
         cred = credentials.Certificate(firebase_conf)
         firebase_admin.initialize_app(cred, {
             "databaseURL": database_url
         })
 
-    # ✅ Step 3: Fetch data from Firebase
+    # ✅ 3. Fetch and show latest data
     ref = db.reference("weather-data")
     all_data = ref.get()
 
     if not all_data:
-        st.warning("No weather data found in the database.")
+        st.warning("No weather data found.")
     else:
-        # Get latest record
         latest_key = max(all_data.keys())
         latest_data = all_data[latest_key]
 
-        # Display it
         st.subheader("🌤️ Latest Weather Data")
         st.json(latest_data)
 
-        # Optional: Convert all data to table
         st.subheader("📊 All Weather Data")
         df = pd.DataFrame.from_dict(all_data, orient="index")
         df.index = pd.to_datetime(df.index, unit='s')
@@ -41,5 +40,7 @@ try:
 
 except KeyError:
     st.error("❌ Firebase credentials or database URL not found in secrets!")
+except ValueError as e:
+    st.error(f"❌ ValueError: {e}")
 except Exception as e:
-    st.error(f"❌ Error: {e}")
+    st.error(f"❌ Unexpected Error: {e}")
