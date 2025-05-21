@@ -5,6 +5,14 @@ from firebase_admin import credentials, db
 import pandas as pd
 from datetime import datetime
 
+import streamlit as st
+
+# Debug: list all secrets that were loaded
+st.write("🔑 Available secret keys:", list(st.secrets.keys()))
+
+# Then stop so you can see the output
+st.stop()
+
 # 1) Configure page
 st.set_page_config(page_title="ESP32 Weather Station", layout="wide")
 
