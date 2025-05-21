@@ -1,32 +1,31 @@
-import os
-import json
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import firebase_admin
 from firebase_admin import credentials, db
 import pandas as pd
 from datetime import datetime
+import json
 
-# ✅ Must be the first Streamlit command
-st.set_page_config(page_title="ESP32 Weather Station", layout="wide")
-
-# Load credentials from Streamlit Secrets
-cred_json = os.getenv('FIREBASE_CREDENTIAL_JSON')
-db_url = os.getenv('DATABASE_URL')
-
-if not cred_json or not db_url:
+# ✅ Load from Streamlit secrets
+try:
+    cred_dict = json.loads(st.secrets["FIREBASE_CREDENTIAL_JSON"])
+    database_url = st.secrets["DATABASE_URL"]
+except KeyError:
     st.error("❌ Firebase credentials or database URL not found in secrets!")
     st.stop()
 
-# Initialize Firebase
-if not firebase_admin._apps:
-    cred_dict = json.loads(cred_json)
-    cred = credentials.Certificate(cred_dict)
-    firebase_admin.initialize_app(cred, {'databaseURL': db_url})
+# ✅ Set Streamlit page config
+st.set_page_config(page_title="ESP32 Weather Station", layout="wide")
 
-# Auto-refresh every 60 seconds
+# ✅ Initialize Firebase only once
+if not firebase_admin._apps:
+    cred = credentials.Certificate(cred_dict)
+    firebase_admin.initialize_app(cred, {'databaseURL': database_url})
+
+# ✅ Auto-refresh every 60s
 st_autorefresh(interval=60000, key="weatherdata_refresh")
 
+# ✅ Get data
 def get_latest_data():
     try:
         ref = db.reference('/devices')
@@ -61,7 +60,7 @@ def get_latest_data():
     except Exception as e:
         return None, f"❌ Error: {e}"
 
-# Streamlit UI
+# ✅ Streamlit UI
 st.title("📡 ESP32 Weather Station - Latest Data")
 
 df, error_msg = get_latest_data()
