@@ -1,70 +1,45 @@
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh
 import firebase_admin
 from firebase_admin import credentials, db
 import pandas as pd
-from datetime import datetime
 
-import streamlit as st
-
-# 1) Configure page
-st.set_page_config(page_title="ESP32 Weather Station", layout="wide")
-
-# 2) Auto-refresh
-st_autorefresh(interval=60000, key="weatherdata_refresh")
-
-# 3) Load secrets directly as dict
-firebase_conf = st.secrets["firebase"]       # a dict
-database_url = st.secrets["database_url"]    # a string
-
-st.write(f"Type of firebase_conf: {type(st.secrets['firebase'])}")
-st.write(st.secrets["firebase"])
-st.stop()
-
-# 4) Initialize Firebase once
-if not firebase_admin._apps:
-    cred = credentials.Certificate(firebase_conf)
-    firebase_admin.initialize_app(cred, {"databaseURL": database_url})
-
-# 5) Function to fetch latest data
-def get_latest_data():
-    try:
-        devices = db.reference("/devices").get()
-        if not devices:
-            return None, "❌ No devices found."
-        device_id = next(iter(devices))
-        records = devices[device_id].get("records", {})
-        if not records:
-            return None, "⚠️ No records under that device."
-
-        valid = {}
-        for ts, vals in records.items():
-            try:
-                dt = datetime.strptime(ts, "%Y-%m-%d_%H:%M:%S")
-                valid[dt] = vals
-            except ValueError:
-                pass
-
-        if not valid:
-            return None, "⚠️ No valid timestamped data."
-
-        df = pd.DataFrame.from_dict(valid, orient="index")
-        df.index.name = "Timestamp"
-        df.sort_index(inplace=True)
-        return df, None
-
-    except Exception as e:
-        return None, f"❌ Error: {e}"
-
-# 6) UI
+st.set_page_config(page_title="ESP32 Weather Station", layout="centered")
 st.title("📡 ESP32 Weather Station - Latest Data")
 
-df, err = get_latest_data()
-if err:
-    st.warning(err)
-elif df is not None:
-    latest = df.iloc[-1]
-    st.success(f"✅ Latest data from: {df.index[-1]}")
-    st.json(latest.to_dict())
-    st.subheader("📊 Historical Data (Last 24 Records)")
-    st.dataframe(df.tail(24))
+# ✅ Step 1: Load Firebase secrets from Streamlit secrets
+try:
+    firebase_conf = dict(st.secrets["firebase"])
+    database_url = firebase_conf.pop("database_url")  # Remove database_url from the credentials dict
+
+    # ✅ Step 2: Initialize Firebase
+    if not firebase_admin._apps:
+        cred = credentials.Certificate(firebase_conf)
+        firebase_admin.initialize_app(cred, {
+            "databaseURL": database_url
+        })
+
+    # ✅ Step 3: Fetch data from Firebase
+    ref = db.reference("weather-data")
+    all_data = ref.get()
+
+    if not all_data:
+        st.warning("No weather data found in the database.")
+    else:
+        # Get latest record
+        latest_key = max(all_data.keys())
+        latest_data = all_data[latest_key]
+
+        # Display it
+        st.subheader("🌤️ Latest Weather Data")
+        st.json(latest_data)
+
+        # Optional: Convert all data to table
+        st.subheader("📊 All Weather Data")
+        df = pd.DataFrame.from_dict(all_data, orient="index")
+        df.index = pd.to_datetime(df.index, unit='s')
+        st.dataframe(df.sort_index(ascending=False))
+
+except KeyError:
+    st.error("❌ Firebase credentials or database URL not found in secrets!")
+except Exception as e:
+    st.error(f"❌ Error: {e}")
